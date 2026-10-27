@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    
+    <!-- Bloqueia o zoom por pinça do dedo, mantendo o tamanho do app fixo e rápido -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <title>Auxiliador de Pedidos Pro</title>
+    
+    <!-- Configurações específicas para parecer aplicativo nativo no iPhone -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AuxVendas">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- CABEÇALHO PRINCIPAL COM MENU DE NAVEGAÇÃO -->
+    <div class="header">
+        <h1>🛒 Auxiliador de Vendas</h1>
+        <div class="menu-navegacao">
+            <button onclick="alternarTela('tela-inicio')" class="btn-menu active" id="btn-inicio">🏠 Início</button>
+            <button onclick="alternarTela('tela-cadastros')" class="btn-menu" id="btn-cadastros">➕ Cadastros</button>
+            <button onclick="alternarTela('tela-simulador')" class="btn-menu" id="btn-simulador">📊 Simulador</button>
+        </div>
+        <button onclick="limparTudo()" class="btn-perigo">🗑️ Apagar Tudo</button>
+    </div>
+
+    <div class="container-principal">
+
+        <!-- 1. TELA INICIAL (DASHBOARD DE BOAS-VINDAS) -->
+        <div id="tela-inicio" class="tela-painel">
+            <div class="card bg-boas-vindas">
+                <h2>👋 Bem-vindo ao seu Auxiliador Rápido</h2>
+                <p class="txt-introducao">Escolha uma das opções no menu superior ou use os blocos abaixo para gerenciar seu aplicativo de forma limpa.</p>
+                <div class="grid-resumos">
+                    <div class="card-resumo" onclick="alternarTela('tela-cadastros')">
+                        <span class="icone-grande">📦</span>
+                        <h3>Cadastrar Itens</h3>
+                        <p>Adicione novos produtos, preços e fotos ao seu catálogo.</p>
+                    </div>
+                    <div class="card-resumo" onclick="alternarTela('tela-simulador')">
+                        <span class="icone-grande">🧮</span>
+                        <h3>Simular Venda</h3>
+                        <p>Selecione um cliente cadastrado e calcule os valores dos produtos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. TELA DE CADASTROS (DESIGN LIMPO ORIGINAL) -->
+        <div id="tela-cadastros" class="tela-painel hidden">
+            <div class="grid-duas-colunas">
+                <!-- Cadastro de Cliente -->
+                <div class="card">
+                    <h2>👤 Registrar Lembrete de Cliente</h2>
+                    <div class="form-grupo">
+                        <label>Nome Completo</label>
+                        <input type="text" id="cliente-nome" placeholder="Ex: João Silva">
+                    </div>
+                    <div class="form-grupo">
+                        <label>CPF</label>
+                        <input type="text" id="cliente-cpf" placeholder="000.000.000-00">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Cidade</label>
+                        <input type="text" id="cliente-cidade" placeholder="Ex: São Paulo">
+                    </div>
+                    <button onclick="salvarCliente()" class="btn-principal">Salvar Lembrete</button>
+                </div>
+
+                <!-- Cadastro de Produto -->
+                <div class="card">
+                    <h2>📦 Cadastrar Novo Produto</h2>
+                    <div class="form-grupo">
+                        <label>Nome do Produto</label>
+                        <input type="text" id="prod-nome" placeholder="Ex: Camiseta Polo Azul">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Preço Unitário (R$)</label>
+                        <input type="number" id="prod-preco" step="0.01" placeholder="0,00">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Foto do Produto</label>
+                        <input type="file" id="prod-imagem" accept="image/*" class="input-file">
+                    </div>
+                    <button onclick="cadastrarProduto()" class="btn-secundario">Adicionar ao Catálogo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TELA DO SIMULADOR (AMBAS AS LIXEIRAS NESTE PAINEL) -->
+        <div id="tela-simulador" class="tela-painel hidden">
+            <div class="grid-layout-simulador">
+                <!-- Painel da Esquerda: Clientes cadastrados com sua lixeira -->
+                <div class="card">
+                    <h2>👥 Pessoas Cadastradas</h2>
+                    <div id="lista-clientes-selecao" class="lista-vertical-selecao">
+                        <!-- Gerado pelo JS -->
+                    </div>
+                </div>
+
+                <!-- Painel da Direita: Catálogo arrumado com as lixeiras nos produtos -->
+                <div class="card coluna-conteudo">
+                    <div class="area-produtos">
+                        <h2>📋 Pedido Ativo: <span id="nome-cliente-ativo" class="text-azul-destaque">Nenhum selecionado</span></h2>
+                        <div id="lista-produtos" class="grid-produtos">
+                            <!-- Gerado pelo app.js -->
+                        </div>
+                    </div>
+                    
+                    <div class="totalizador">
+                        <div>
+                            <p id="resumo-cliente" class="resumo-cliente">Selecione um cliente ao lado</p>
+                            <span class="total-label">Total Calculado:</span>
+                        </div>
+                        <span id="total-geral" class="total-valor">R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
