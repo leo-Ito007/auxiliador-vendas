@@ -192,8 +192,9 @@ window.selecionarCliente = function(id) {
 
 // Cadastra o produto salvando na Nuvem do Firebase
 // Substitua a função window.cadastrarProduto antiga por esta no seu app.js
+// Substitua o bloco de cadastro de produtos antigo por este aqui no seu app.js
+// Substitua o bloco de cadastro de produtos antigo por este aqui no seu app.js
 window.cadastrarProduto = function(evento) {
-    // Se o navegador tentar disparar um evento de envio de formulário, nós barramos aqui
     if (evento && evento.preventDefault) {
         evento.preventDefault();
     }
@@ -216,29 +217,60 @@ window.cadastrarProduto = function(evento) {
             return;
         }
 
-        // Checagem segura do arquivo de imagem na posição 0
+        // Checagem segura do arquivo de imagem
         if (imagemInput && imagemInput.files && imagemInput.files.length > 0) {
             const file = imagemInput.files[0];
             const reader = new FileReader();
             
             reader.onloadend = function() {
-                salvarNoBanco(nome, preco, reader.result);
+                window.salvarNoBanco(nome, preco, reader.result);
             };
             
             reader.onerror = function() {
                 alert("Erro ao processar imagem. Salvando com imagem padrão.");
-                salvarNoBanco(nome, preco, 'https://placeholder.com');
+                window.salvarNoBanco(nome, preco, 'https://placeholder.com');
             };
 
             reader.readAsDataURL(file);
         } else {
-            // Se o usuário não colocar foto, usa um link padrão em vez de travar
-            salvarNoBanco(nome, preco, 'https://placeholder.com');
+            // Se o usuário não colocar foto, usa um link padrão
+            window.salvarNoBanco(nome, preco, 'https://placeholder.com');
         }
     } catch (erro) {
         alert("Ocorreu um erro inesperado no cadastro: " + erro.message);
     }
 };
+
+// CORREÇÃO: Adicionado window. para o JavaScript encontrar a função globalmente
+window.salvarNoBanco = function(nome, preco, imagemBase64) {
+    if (!db) {
+        alert("Erro: O banco de dados do Firebase não foi inicializado corretamente.");
+        return;
+    }
+    
+    const idUnico = Date.now();
+    const trackingProduto = {
+        id: idUnico,
+        nome: nome,
+        preco: preco,
+        imagem: imagemBase64
+    };
+
+    db.ref('banco_produtos/' + idUnico).set(trackingProduto)
+    .then(() => {
+        document.getElementById('prod-nome').value = '';
+        document.getElementById('prod-preco').value = '';
+        if (document.getElementById('prod-imagem')) {
+            document.getElementById('prod-imagem').value = '';
+        }
+        window.alternarTela('tela-simulador');
+    })
+    .catch((error) => {
+        alert("Erro ao salvar produto na nuvem: " + error.message);
+    });
+};
+
+
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
 window.removerProduto = function(id) {
