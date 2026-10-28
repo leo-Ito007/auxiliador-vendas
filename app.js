@@ -10,8 +10,15 @@ const firebaseConfig = {
     measurementId: "G-YRHKXFK8HE"
 };
 
-// Inicializa usando o formato global compatível
-firebase.initializeApp(firebaseConfig);
+// Inicializa o Firebase com tratamento de erro integrado
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+} catch (e) {
+    console.error("Erro ao inicializar Firebase: ", e);
+}
+
 const db = firebase.database();
 // ====================================================
 
@@ -19,27 +26,32 @@ let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
 
-// Escuta as alterações na nuvem em tempo real
+// Escuta as alterações na nuvem em tempo real de forma segura
 db.ref('banco_produtos').on('value', (snapshot) => {
-    const dados = snapshot.val();
-    if (dados) {
-        produtos = Object.keys(dados).map(key => dados[key]);
-    } else {
-        produtos = [];
+    try {
+        const dados = snapshot.val();
+        if (dados) {
+            produtos = Object.keys(dados).map(key => dados[key]);
+        } else {
+            produtos = [];
+        }
+        renderizarProdutos();
+        renderizarListaClientes();
+    } catch (e) {
+        console.error("Erro ao ler dados da nuvem: ", e);
     }
-    renderizarProdutos();
-    renderizarListaClientes();
 });
 
 window.onload = function() {
     renderizarListaClientes();
-    if (listaClientes.length > 0) {
+    // SEGURANÇA: Corrigido o índice [0] para evitar travar no carregamento inicial
+    if (listaClientes && listaClientes.length > 0) {
         selecionarCliente(listaClientes[0].id);
     }
 };
 
-// Controla as abas/telas do aplicativo
-function alternarTela(idTela) {
+// Controla as abas/telas do aplicativo de forma global
+window.alternarTela = function(idTela) {
     document.querySelectorAll('.tela-painel').forEach(tela => {
         tela.classList.add('hidden');
     });
@@ -52,13 +64,17 @@ function alternarTela(idTela) {
         telaAlvo.classList.remove('hidden');
     }
     
-    if (idTela === 'tela-inicio') document.getElementById('btn-inicio').classList.add('active');
-    if (idTela === 'tela-cadastros') document.getElementById('btn-cadastros').classList.add('active');
-    if (idTela === 'tela-simulador') document.getElementById('btn-simulador').classList.add('active');
+    const btnIni = document.getElementById('btn-inicio');
+    const btnCad = document.getElementById('btn-cadastros');
+    const btnSim = document.getElementById('btn-simulador');
+
+    if (idTela === 'tela-inicio' && btnIni) btnIni.classList.add('active');
+    if (idTela === 'tela-cadastros' && btnCad) btnCad.classList.add('active');
+    if (idTela === 'tela-simulador' && btnSim) btnSim.classList.add('active');
 }
 
 // Cadastra o cliente lembrete
-function salvarCliente() {
+window.salvarCliente = function() {
     const nome = document.getElementById('cliente-nome').value;
     const cpf = document.getElementById('cliente-cpf').value;
     const cidade = document.getElementById('cliente-cidade').value;
@@ -72,7 +88,7 @@ function salvarCliente() {
         id: Date.now(),
         nome: nome,
         cpf: cpf || 'Não informado',
-        cidade: cidade || 'Não informada',
+        cidade: city || 'Não informada',
         carrinho: {}
     };
 
@@ -85,18 +101,20 @@ function salvarCliente() {
 
     renderizarListaClientes();
     selecionarCliente(novoCliente.id);
-    alternarTela('tela-simulador');
+    window.alternarTela('tela-simulador');
 }
 
 // REMOVER UM CLIENTE ESPECÍFICO
-function removerCliente(id, event) {
+window.removerCliente = function(id, event) {
     if (event) event.stopPropagation();
 
     if (confirm("Deseja mesmo remover esta pessoa do painel de lembretes?")) {
         if (clienteAtivo && clienteAtivo.id === id) {
             clienteAtivo = null;
-            document.getElementById('nome-cliente-ativo').innerText = 'Nenhum selecionado';
-            document.getElementById('resumo-cliente').innerText = 'Selecione um cliente ao lado';
+            const nmCli = document.getElementById('nome-cliente-ativo');
+            const resCli = document.getElementById('resumo-cliente');
+            if (nmCli) nmCli.innerText = 'Nenhum selecionado';
+            if (resCli) resCli.innerText = 'Selecione um cliente ao lado';
         }
 
         listaClientes = listaClientes.filter(cli => cli.id !== id);
@@ -119,7 +137,7 @@ function calcularTotalCliente(cliente) {
     return total;
 }
 
-// Renderiza a lista de clientes (Esquerda)
+// Renderiza la lista de clientes (Esquerda)
 function renderizarListaClientes() {
     const container = document.getElementById('lista-clientes-selecao');
     if (!container) return;
@@ -135,7 +153,7 @@ function renderizarListaClientes() {
         const totalDinheiro = calcularTotalCliente(cli);
         
         container.innerHTML += `
-            <div class="item-cliente-link ${classeAtivo}" onclick="selecionarCliente(${cli.id})" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px;">
+            <div class="item-cliente-link ${classeAtivo}" onclick="window.selecionarCliente(${cli.id})" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px;">
                 <div style="flex: 1; text-align: left;">
                     <div style="font-size: 14px; font-weight: 800; color: #000000;">${cli.nome}</div>
                     <div style="font-size: 11px; color: #4b5563; margin-bottom: 2px;">📍 ${cli.cidade}</div>
@@ -143,7 +161,7 @@ function renderizarListaClientes() {
                         Total: R$ ${totalDinheiro.toFixed(2).replace('.', ',')}
                     </div>
                 </div>
-                <button onclick="removerCliente(${cli.id}, event)" style="background-color: #991b1b; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                <button onclick="window.removerCliente(${cli.id}, event)" style="background-color: #991b1b; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
                     🗑️
                 </button>
             </div>
@@ -151,7 +169,7 @@ function renderizarListaClientes() {
     });
 }
 
-function selecionarCliente(id) {
+window.selecionarCliente = function(id) {
     clienteAtivo = listaClientes.find(c => c.id === id);
     
     if (clienteAtivo && !clienteAtivo.carrinho) {
@@ -159,8 +177,10 @@ function selecionarCliente(id) {
     }
 
     if (clienteAtivo) {
-        document.getElementById('nome-cliente-ativo').innerText = clienteAtivo.nome;
-        document.getElementById('resumo-cliente').innerHTML = `Pedido para: <strong>${clienteAtivo.nome}</strong> (CPF: ${clienteAtivo.cpf})`;
+        const nmCli = document.getElementById('nome-cliente-ativo');
+        const resCli = document.getElementById('resumo-cliente');
+        if (nmCli) nmCli.innerText = clienteAtivo.nome;
+        if (resCli) resCli.innerHTML = `Pedido para: <strong>${clienteAtivo.nome}</strong> (CPF: ${clienteAtivo.cpf})`;
     }
     
     renderizarListaClientes();
@@ -168,7 +188,7 @@ function selecionarCliente(id) {
 }
 
 // Cadastra o produto salvando na Nuvem do Firebase
-function cadastrarProduto() {
+window.cadastrarProduto = function() {
     const nome = document.getElementById('prod-nome').value;
     const preco = parseFloat(document.getElementById('prod-preco').value);
     const imagemInput = document.getElementById('prod-imagem');
@@ -178,7 +198,7 @@ function cadastrarProduto() {
         return;
     }
 
-    const file = imagemInput.files[0];
+    const file = imagemInput.files ? imagemInput.files[0] : null;
     
     if (file) {
         const reader = new FileReader();
@@ -200,13 +220,12 @@ function salvarNoBanco(nome, preco, imagemBase64) {
         imagem: imagemBase64
     };
 
-    // ENVIA PARA A NUVEM DO FIREBASE (SINTAXE COMPATÍVEL)
     db.ref('banco_produtos/' + idUnico).set(trackingProduto)
     .then(() => {
         document.getElementById('prod-nome').value = '';
         document.getElementById('prod-preco').value = '';
         document.getElementById('prod-imagem').value = '';
-        alternarTela('tela-simulador');
+        window.alternarTela('tela-simulador');
     })
     .catch((error) => {
         alert("Erro ao salvar produto na nuvem: " + error.message);
@@ -214,7 +233,7 @@ function salvarNoBanco(nome, preco, imagemBase64) {
 }
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
-function removerProduto(id) {
+window.removerProduto = function(id) {
     if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral da nuvem?")) {
         listaClientes.forEach(cli => {
             if (cli.carrinho && cli.carrinho[id]) {
@@ -222,7 +241,6 @@ function removerProduto(id) {
             }
         });
         localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
-
         db.ref('banco_produtos/' + id).remove();
     }
 }
@@ -233,9 +251,11 @@ function renderizarProdutos() {
     if (!container) return;
     container.innerHTML = '';
 
+    // SEGURANÇA: Checagem com "if" adicionada para evitar travamentos caso o elemento não exista em tela
     if (produtos.length === 0) {
         container.innerHTML = '<p style="color: #6b7280; grid-column: span 2 / span 2; text-align: center; padding: 32px 0;">Nenhum produto cadastrado ainda.</p>';
-        document.getElementById('total-geral').innerText = "R$ 0,00";
+        const campoTotal = document.getElementById('total-geral');
+        if (campoTotal) campoTotal.innerText = "R$ 0,00";
         return;
     }
 
@@ -245,19 +265,10 @@ function renderizarProdutos() {
         container.innerHTML += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                    <img src="${prod.imagem}" style="width: 52px; height: 52px; object-fit: cover; border-radius: 8px; background-color: #e5e7eb;">
-                    <div style="text-align: left;">
-                        <h4 style="font-weight: 800; color: #000000; font-size: 13px; margin: 0 0 2px 0;">${prod.nome}</h4>
-                        <p style="color: #0f172a; font-weight: bold; font-size: 13px; margin: 0;">R$ ${prod.preco.toFixed(2).replace('.', ',')}</p>
-                    </div>
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 65px; text-align: center;">
-                        <label style="display: block; font-size: 9px; color: #4b5563; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">Qtd</label>
-                        <input type="number" min="0" value="${qtdAtual}" 
-oninput="atualizarQuantidade(${prod.id}, this.value)"
-style="width: 100%; padding: 4px; border: 2px solid #e5e7eb; border-radius: 6px; text-align: center; font-weight: bold; color: #000000; outline: none;">
+${prod.nome}
+R$ ${prod.preco.toFixed(2).replace('.', ',')}
+
+Qtd
 🗑️
 
 
@@ -266,7 +277,7 @@ style="width: 100%; padding: 4px; border: 2px solid #e5e7eb; border-radius: 6px;
 });
 calcularTotalGeralAtivo();
 }
-function atualizarQuantidade(idProduto, qtd) {
+window.atualizarQuantidade = function(idProduto, qtd) {
 if (!clienteAtivo) {
 alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
 renderizarProdutos();
@@ -285,7 +296,7 @@ if (campoTotal) {
 campoTotal.innerText = R$ `${total.toFixed(2).replace('.', ',')}`;
 }
 }
-function limparTudo() {
+window.limparTudo = function() {
 if (confirm("Tem certeza que deseja apagar permanentemente seus clientes locais? Os produtos da nuvem NÃO serão apagados por segurança.")) {
 localStorage.removeItem('banco_clientes');
 listaClientes = [];
@@ -296,6 +307,6 @@ if (nomeCli) nomeCli.innerText = 'Nenhum selecionado';
 if (resCli) resCli.innerText = 'Selecione um cliente ao lado';
 renderizarListaClientes();
 renderizarProdutos();
-alternarTela('tela-inicio');
+window.alternarTela('tela-inicio');
 }
 }
