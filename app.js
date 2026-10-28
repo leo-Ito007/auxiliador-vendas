@@ -1,8 +1,4 @@
-// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE ======
-import { initializeApp } from "https://gstatic.com";
-import { getDatabase, ref, set, onValue } from "https://gstatic.com";
-
-// Suas credenciais oficiais do Firebase (já preenchidas a partir da sua imagem)
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (FORMATO COMPATÍVEL) ======
 const firebaseConfig = {
     apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
     authDomain: "://firebaseapp.com",
@@ -14,18 +10,17 @@ const firebaseConfig = {
     measurementId: "G-YRHKXFK8HE"
 };
 
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// Inicializa usando o formato global compatível
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 // ====================================================
 
-// Produtos carregados da Nuvem, Clientes guardados no celular localmente
 let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
 
 // Escuta as alterações na nuvem em tempo real
-onValue(ref(db, 'banco_produtos'), (snapshot) => {
+db.ref('banco_produtos').on('value', (snapshot) => {
     const dados = snapshot.val();
     if (dados) {
         produtos = Object.keys(dados).map(key => dados[key]);
@@ -44,8 +39,7 @@ window.onload = function() {
 };
 
 // Controla as abas/telas do aplicativo
-// Procure por esta função dentro do seu app.js e garanta que ela comece com window.alternarTela
-window.alternarTela = function(idTela) {
+function alternarTela(idTela) {
     document.querySelectorAll('.tela-painel').forEach(tela => {
         tela.classList.add('hidden');
     });
@@ -63,9 +57,8 @@ window.alternarTela = function(idTela) {
     if (idTela === 'tela-simulador') document.getElementById('btn-simulador').classList.add('active');
 }
 
-
 // Cadastra o cliente lembrete
-window.salvarCliente = function() {
+function salvarCliente() {
     const nome = document.getElementById('cliente-nome').value;
     const cpf = document.getElementById('cliente-cpf').value;
     const cidade = document.getElementById('cliente-cidade').value;
@@ -92,11 +85,11 @@ window.salvarCliente = function() {
 
     renderizarListaClientes();
     selecionarCliente(novoCliente.id);
-    window.alternarTela('tela-simulador');
+    alternarTela('tela-simulador');
 }
 
-// REMOVER UM CLIENTE ESPECÍFICO (No painel da esquerda)
-window.removerCliente = function(id, event) {
+// REMOVER UM CLIENTE ESPECÍFICO
+function removerCliente(id, event) {
     if (event) event.stopPropagation();
 
     if (confirm("Deseja mesmo remover esta pessoa do painel de lembretes?")) {
@@ -158,7 +151,7 @@ function renderizarListaClientes() {
     });
 }
 
-window.selecionarCliente = function(id) {
+function selecionarCliente(id) {
     clienteAtivo = listaClientes.find(c => c.id === id);
     
     if (clienteAtivo && !clienteAtivo.carrinho) {
@@ -175,7 +168,7 @@ window.selecionarCliente = function(id) {
 }
 
 // Cadastra o produto salvando na Nuvem do Firebase
-window.cadastrarProduto = function() {
+function cadastrarProduto() {
     const nome = document.getElementById('prod-nome').value;
     const preco = parseFloat(document.getElementById('prod-preco').value);
     const imagemInput = document.getElementById('prod-imagem');
@@ -207,13 +200,13 @@ function salvarNoBanco(nome, preco, imagemBase64) {
         imagem: imagemBase64
     };
 
-    // ENVIA PARA A NUVEM DO FIREBASE
-    set(ref(db, 'banco_produtos/' + idUnico), trackingProduto)
+    // ENVIA PARA A NUVEM DO FIREBASE (SINTAXE COMPATÍVEL)
+    db.ref('banco_produtos/' + idUnico).set(trackingProduto)
     .then(() => {
         document.getElementById('prod-nome').value = '';
         document.getElementById('prod-preco').value = '';
         document.getElementById('prod-imagem').value = '';
-        window.alternarTela('tela-simulador');
+        alternarTela('tela-simulador');
     })
     .catch((error) => {
         alert("Erro ao salvar produto na nuvem: " + error.message);
@@ -221,7 +214,7 @@ function salvarNoBanco(nome, preco, imagemBase64) {
 }
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
-window.removerProduto = function(id) {
+function removerProduto(id) {
     if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral da nuvem?")) {
         listaClientes.forEach(cli => {
             if (cli.carrinho && cli.carrinho[id]) {
@@ -230,8 +223,7 @@ window.removerProduto = function(id) {
         });
         localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
 
-        // APAGA DIRETO DO FIREBASE
-        set(ref(db, 'banco_produtos/' + id), null);
+        db.ref('banco_produtos/' + id).remove();
     }
 }
 
@@ -261,7 +253,11 @@ function renderizarProdutos() {
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 10px;">
-Qtd
+                    <div style="width: 65px; text-align: center;">
+                        <label style="display: block; font-size: 9px; color: #4b5563; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">Qtd</label>
+                        <input type="number" min="0" value="${qtdAtual}" 
+oninput="atualizarQuantidade(${prod.id}, this.value)"
+style="width: 100%; padding: 4px; border: 2px solid #e5e7eb; border-radius: 6px; text-align: center; font-weight: bold; color: #000000; outline: none;">
 🗑️
 
 
@@ -270,7 +266,7 @@ Qtd
 });
 calcularTotalGeralAtivo();
 }
-window.atualizarQuantidade = function(idProduto, qtd) {
+function atualizarQuantidade(idProduto, qtd) {
 if (!clienteAtivo) {
 alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
 renderizarProdutos();
@@ -286,10 +282,10 @@ function calcularTotalGeralAtivo() {
 const total = calcularTotalCliente(clienteAtivo);
 const campoTotal = document.getElementById('total-geral');
 if (campoTotal) {
-campoTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+campoTotal.innerText = R$ `${total.toFixed(2).replace('.', ',')}`;
 }
 }
-window.limparTudo = function() {
+function limparTudo() {
 if (confirm("Tem certeza que deseja apagar permanentemente seus clientes locais? Os produtos da nuvem NÃO serão apagados por segurança.")) {
 localStorage.removeItem('banco_clientes');
 listaClientes = [];
@@ -300,6 +296,6 @@ if (nomeCli) nomeCli.innerText = 'Nenhum selecionado';
 if (resCli) resCli.innerText = 'Selecione um cliente ao lado';
 renderizarListaClientes();
 renderizarProdutos();
-window.alternarTela('tela-inicio');
+alternarTela('tela-inicio');
 }
 }

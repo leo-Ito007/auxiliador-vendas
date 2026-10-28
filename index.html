@@ -7,7 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <title>Auxiliador de Pedidos Pro</title>
-    
+    <!-- Cole estas duas linhas dentro do seu head -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <!-- O restante das suas tags do head continuam aqui (ex: link do style.css) -->
     <!-- Configurações específicas para parecer aplicativo nativo no iPhone -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,9 +33,12 @@
     <div class="header">
         <h1>🛒 Auxiliador de Vendas</h1>
         <div class="menu-navegacao">
-<button id="btn-inicio" class="btn-menu active" onclick="window.alternarTela('tela-inicio')">🏠 Início</button>
-<button id="btn-cadastros" class="btn-menu" onclick="window.alternarTela('tela-cadastros')">➕ Cadastros</button>
-<button id="btn-simulador" class="btn-menu" onclick="window.alternarTela('tela-simulador')">📊 Simulador</button>
+<!-- Deixe os três botões exatamente assim, sem o "onclick" antigo -->
+<button id="btn-inicio" class="btn-menu active" onclick="alternarTela('tela-inicio')">🏠 Início</button>
+<button id="btn-cadastros" class="btn-menu" onclick="alternarTela('tela-cadastros')">➕ Cadastros</button>
+<button id="btn-simulador" class="btn-menu" onclick="alternarTela('tela-simulador')">📊 Simulador</button>
+
+
         </div>
         <button onclick="limparTudo()" class="btn-perigo">🗑️ Apagar Tudo</button>
     </div>
@@ -135,4 +141,7 @@
 
     <script src="app.js"></script>
 </body>
+<!-- Altere para ficar exatamente assim, sem o type="module" -->
+<script src="app.js"></script>
+
 </html>
