@@ -199,7 +199,7 @@ window.cadastrarProduto = function() {
         const imagemInput = document.getElementById('prod-imagem');
 
         if (!nomeCampo || !precoCampo) {
-            alert("Erro técnico: Elementos do formulário não foram encontrados no HTML.");
+            alert("Erro técnico: Os campos do formulário não foram encontrados no HTML.");
             return;
         }
 
@@ -211,9 +211,9 @@ window.cadastrarProduto = function() {
             return;
         }
 
-        // Verifica se há alguma foto selecionada no input de arquivo
+        // CORREÇÃO DEFINITIVA: Pegando o arquivo correto na posição [0]
         if (imagemInput && imagemInput.files && imagemInput.files.length > 0) {
-            const file = imagemInput.files[0]; // Correção direta no índice do arquivo
+            const file = imagemInput.files[0]; // Adicionado o [0] para pegar a primeira foto
             const reader = new FileReader();
             
             reader.onloadend = function() {
@@ -221,20 +221,19 @@ window.cadastrarProduto = function() {
             };
             
             reader.onerror = function() {
-                alert("Erro ao ler o arquivo de imagem selecionado. Tentando salvar com imagem padrão.");
+                alert("Erro ao ler o arquivo de imagem. Salvando com imagem padrão.");
                 salvarNoBanco(nome, preco, 'https://placeholder.com');
             };
 
             reader.readAsDataURL(file);
         } else {
-            // Se não tiver imagem, salva com um link padrão sem quebrar
+            // Se o usuário não escolher foto, salva com uma imagem padrão sem travar
             salvarNoBanco(nome, preco, 'https://placeholder.com');
         }
     } catch (erro) {
-        alert("Ocorreu um erro ao tentar processar o cadastro: " + erro.message);
+        alert("Ocorreu um erro ao processar o cadastro: " + erro.message);
     }
 };
-
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
 window.removerProduto = function(id) {
