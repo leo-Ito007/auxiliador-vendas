@@ -191,50 +191,50 @@ window.selecionarCliente = function(id) {
 }
 
 // Cadastra o produto salvando na Nuvem do Firebase
+// Substitua a função window.cadastrarProduto antiga por esta no seu app.js
 window.cadastrarProduto = function() {
-    const nome = document.getElementById('prod-nome').value;
-    const preco = parseFloat(document.getElementById('prod-preco').value);
-    const imagemInput = document.getElementById('prod-imagem');
+    try {
+        const nomeCampo = document.getElementById('prod-nome');
+        const precoCampo = document.getElementById('prod-preco');
+        const imagemInput = document.getElementById('prod-imagem');
 
-    if (!nome || isNaN(preco)) {
-        alert("Por favor, preencha o nome e o preço do produto!");
-        return;
-    }
-
-    const file = (imagemInput && imagemInput.files) ? imagemInput.files[0] : null;
-    
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            salvarNoBanco(nome, preco, reader.result);
+        if (!nomeCampo || !precoCampo) {
+            alert("Erro técnico: Elementos do formulário não foram encontrados no HTML.");
+            return;
         }
-        reader.readAsDataURL(file);
-    } else {
-        salvarNoBanco(nome, preco, 'https://placeholder.com');
+
+        const nome = nomeCampo.value.trim();
+        const preco = parseFloat(precoCampo.value);
+
+        if (!nome || isNaN(preco)) {
+            alert("Por favor, preencha o nome e o preço do produto antes de adicionar!");
+            return;
+        }
+
+        // Verifica se há alguma foto selecionada no input de arquivo
+        if (imagemInput && imagemInput.files && imagemInput.files.length > 0) {
+            const file = imagemInput.files[0]; // Correção direta no índice do arquivo
+            const reader = new FileReader();
+            
+            reader.onloadend = function() {
+                salvarNoBanco(nome, preco, reader.result);
+            };
+            
+            reader.onerror = function() {
+                alert("Erro ao ler o arquivo de imagem selecionado. Tentando salvar com imagem padrão.");
+                salvarNoBanco(nome, preco, 'https://placeholder.com');
+            };
+
+            reader.readAsDataURL(file);
+        } else {
+            // Se não tiver imagem, salva com um link padrão sem quebrar
+            salvarNoBanco(nome, preco, 'https://placeholder.com');
+        }
+    } catch (erro) {
+        alert("Ocorreu um erro ao tentar processar o cadastro: " + erro.message);
     }
-}
+};
 
-function salvarNoBanco(nome, preco, imagemBase64) {
-    if (!db) return;
-    const idUnico = Date.now();
-    const trackingProduto = {
-        id: idUnico,
-        nome: nome,
-        preco: preco,
-        imagem: imagemBase64
-    };
-
-    db.ref('banco_produtos/' + idUnico).set(trackingProduto)
-    .then(() => {
-        document.getElementById('prod-nome').value = '';
-        document.getElementById('prod-preco').value = '';
-        document.getElementById('prod-imagem').value = '';
-        window.alternarTela('tela-simulador');
-    })
-    .catch((error) => {
-        alert("Erro ao salvar produto na nuvem: " + error.message);
-    });
-}
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
 window.removerProduto = function(id) {
