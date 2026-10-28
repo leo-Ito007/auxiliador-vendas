@@ -1,18 +1,51 @@
-let produtos = JSON.parse(localStorage.getItem('banco_produtos')) || [];
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE ======
+import { initializeApp } from "https://gstatic.com";
+import { getDatabase, ref, set, onValue } from "https://gstatic.com";
+
+// Suas credenciais oficiais do Firebase (já preenchidas a partir da sua imagem)
+const firebaseConfig = {
+    apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
+    authDomain: "://firebaseapp.com",
+    databaseURL: "https://firebaseio.com",
+    projectId: "auxiliador-de-vendas-422f9",
+    storageBucket: "auxiliador-de-vendas-422f9.firebasestorage.app",
+    messagingSenderId: "695886275660",
+    appId: "1:695886275660:web:52c5e6b797f6dea05800e9",
+    measurementId: "G-YRHKXFK8HE"
+};
+
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+// ====================================================
+
+// Produtos carregados da Nuvem, Clientes guardados no celular localmente
+let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
 
-window.onload = function() {
+// Escuta as alterações na nuvem em tempo real
+onValue(ref(db, 'banco_produtos'), (snapshot) => {
+    const dados = snapshot.val();
+    if (dados) {
+        produtos = Object.keys(dados).map(key => dados[key]);
+    } else {
+        produtos = [];
+    }
     renderizarProdutos();
     renderizarListaClientes();
-    
+});
+
+window.onload = function() {
+    renderizarListaClientes();
     if (listaClientes.length > 0) {
         selecionarCliente(listaClientes[0].id);
     }
 };
 
 // Controla as abas/telas do aplicativo
-function alternarTela(idTela) {
+// Procure por esta função dentro do seu app.js e garanta que ela comece com window.alternarTela
+window.alternarTela = function(idTela) {
     document.querySelectorAll('.tela-painel').forEach(tela => {
         tela.classList.add('hidden');
     });
@@ -20,15 +53,19 @@ function alternarTela(idTela) {
         btn.classList.remove('active');
     });
 
-    document.getElementById(idTela).classList.remove('hidden');
+    const telaAlvo = document.getElementById(idTela);
+    if (telaAlvo) {
+        telaAlvo.classList.remove('hidden');
+    }
     
     if (idTela === 'tela-inicio') document.getElementById('btn-inicio').classList.add('active');
     if (idTela === 'tela-cadastros') document.getElementById('btn-cadastros').classList.add('active');
     if (idTela === 'tela-simulador') document.getElementById('btn-simulador').classList.add('active');
 }
 
+
 // Cadastra o cliente lembrete
-function salvarCliente() {
+window.salvarCliente = function() {
     const nome = document.getElementById('cliente-nome').value;
     const cpf = document.getElementById('cliente-cpf').value;
     const cidade = document.getElementById('cliente-cidade').value;
@@ -55,11 +92,11 @@ function salvarCliente() {
 
     renderizarListaClientes();
     selecionarCliente(novoCliente.id);
-    alternarTela('tela-simulador');
+    window.alternarTela('tela-simulador');
 }
 
-// REMOVER UM CLIENTE SPECÍFICO (No painel da esquerda)
-function removerCliente(id, event) {
+// REMOVER UM CLIENTE ESPECÍFICO (No painel da esquerda)
+window.removerCliente = function(id, event) {
     if (event) event.stopPropagation();
 
     if (confirm("Deseja mesmo remover esta pessoa do painel de lembretes?")) {
@@ -92,6 +129,7 @@ function calcularTotalCliente(cliente) {
 // Renderiza a lista de clientes (Esquerda)
 function renderizarListaClientes() {
     const container = document.getElementById('lista-clientes-selecao');
+    if (!container) return;
     container.innerHTML = '';
 
     if (listaClientes.length === 0) {
@@ -120,7 +158,7 @@ function renderizarListaClientes() {
     });
 }
 
-function selecionarCliente(id) {
+window.selecionarCliente = function(id) {
     clienteAtivo = listaClientes.find(c => c.id === id);
     
     if (clienteAtivo && !clienteAtivo.carrinho) {
@@ -136,8 +174,8 @@ function selecionarCliente(id) {
     renderizarProdutos();
 }
 
-// Cadastra o produto
-function cadastrarProduto() {
+// Cadastra o produto salvando na Nuvem do Firebase
+window.cadastrarProduto = function() {
     const nome = document.getElementById('prod-nome').value;
     const preco = parseFloat(document.getElementById('prod-preco').value);
     const imagemInput = document.getElementById('prod-imagem');
@@ -161,28 +199,30 @@ function cadastrarProduto() {
 }
 
 function salvarNoBanco(nome, preco, imagemBase64) {
+    const idUnico = Date.now();
     const trackingProduto = {
-        id: Date.now(),
+        id: idUnico,
         nome: nome,
         preco: preco,
         imagem: imagemBase64
     };
 
-    produtos.push(trackingProduto);
-    localStorage.setItem('banco_produtos', JSON.stringify(produtos));
-    
-    document.getElementById('prod-nome').value = '';
-    document.getElementById('prod-preco').value = '';
-    document.getElementById('prod-imagem').value = '';
-
-    renderizarProdutos();
-    renderizarListaClientes();
-    alternarTela('tela-simulador');
+    // ENVIA PARA A NUVEM DO FIREBASE
+    set(ref(db, 'banco_produtos/' + idUnico), trackingProduto)
+    .then(() => {
+        document.getElementById('prod-nome').value = '';
+        document.getElementById('prod-preco').value = '';
+        document.getElementById('prod-imagem').value = '';
+        window.alternarTela('tela-simulador');
+    })
+    .catch((error) => {
+        alert("Erro ao salvar produto na nuvem: " + error.message);
+    });
 }
 
-// REMOVER UM PRODUTO PERMANENTEMENTE (Fica no painel da direita agora)
-function removerProduto(id) {
-    if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral?")) {
+// REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
+window.removerProduto = function(id) {
+    if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral da nuvem?")) {
         listaClientes.forEach(cli => {
             if (cli.carrinho && cli.carrinho[id]) {
                 delete cli.carrinho[id];
@@ -190,17 +230,15 @@ function removerProduto(id) {
         });
         localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
 
-        produtos = produtos.filter(p => p.id !== id);
-        localStorage.setItem('banco_produtos', JSON.stringify(produtos));
-
-        renderizarProdutos();
-        renderizarListaClientes();
+        // APAGA DIRETO DO FIREBASE
+        set(ref(db, 'banco_produtos/' + id), null);
     }
 }
 
-// RENDERIZA OS PRODUTOS (DESIGN CORRIGIDO EM BLOCO COMPLETO)
+// RENDERIZA OS PRODUTOS
 function renderizarProdutos() {
     const container = document.getElementById('lista-produtos');
+    if (!container) return;
     container.innerHTML = '';
 
     if (produtos.length === 0) {
@@ -223,32 +261,21 @@ function renderizarProdutos() {
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 65px; text-align: center;">
-                        <label style="display: block; font-size: 9px; color: #4b5563; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">Qtd</label>
-                        <input type="number" min="0" value="${qtdAtual}" 
-                            oninput="atualizarQuantidade(${prod.id}, this.value)" 
-                            style="width: 100%; padding: 4px; border: 2px solid #e5e7eb; border-radius: 6px; text-align: center; font-weight: bold; color: #000000; outline: none;">
-                    </div>
-                    
-                    <!-- Lixeira individual do Produto direto no Simulador -->
-                    <button onclick="removerProduto(${prod.id})" style="background-color: #991b1b; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 14px;" title="Excluir produto do catálogo">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    
-    calcularTotalGeralAtivo();
+Qtd
+🗑️
+
+
+
+`;
+});
+calcularTotalGeralAtivo();
 }
-
-function actualizarQuantidade(idProduto, qtd) {
-    if (!clienteAtivo) {
-        alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
-        renderizarProdutos();
-        return;
-    }
-
+window.atualizarQuantidade = function(idProduto, qtd) {
+if (!clienteAtivo) {
+alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
+renderizarProdutos();
+return;
+}
 const valorQtd = parseInt(qtd) || 0;
 clienteAtivo.carrinho[idProduto] = valorQtd;
 localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
@@ -257,18 +284,22 @@ renderizarListaClientes();
 }
 function calcularTotalGeralAtivo() {
 const total = calcularTotalCliente(clienteAtivo);
-document.getElementById('total-geral').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+const campoTotal = document.getElementById('total-geral');
+if (campoTotal) {
+campoTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
 }
-function limparTudo() {
-if (confirm("Tem certeza que deseja apagar permanentemente todos os clientes, produtos e o histórico salvo?")) {
-localStorage.clear();
-produtos = [];
+}
+window.limparTudo = function() {
+if (confirm("Tem certeza que deseja apagar permanentemente seus clientes locais? Os produtos da nuvem NÃO serão apagados por segurança.")) {
+localStorage.removeItem('banco_clientes');
 listaClientes = [];
 clienteAtivo = null;
-document.getElementById('nome-cliente-ativo').innerText = 'Nenhum selecionado';
-document.getElementById('resumo-cliente').innerText = 'Selecione um cliente ao lado';
+const nomeCli = document.getElementById('nome-cliente-ativo');
+const resCli = document.getElementById('resumo-cliente');
+if (nomeCli) nomeCli.innerText = 'Nenhum selecionado';
+if (resCli) resCli.innerText = 'Selecione um cliente ao lado';
 renderizarListaClientes();
 renderizarProdutos();
-alternarTela('tela-inicio');
+window.alternarTela('tela-inicio');
 }
 }

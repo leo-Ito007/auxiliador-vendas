@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aux-vendas-instantaneo-v1';
+const CACHE_NAME = 'aux-vendas-instantaneo-v2'; // Mudamos a versão para forçar o celular a atualizar
 const assets = [
   '/',
   '/index.html',
@@ -10,23 +10,41 @@ const assets = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(assets);
-    }).then(() => self.skipWaiting()) // Força o app a atualizar na hora
+      // Ignora erros ao tentar colocar na memória arquivos externos ou inexistentes
+      return cache.addAll(assets).catch(err => console.log("Aviso no cache: ", err));
+    }).then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(self.clients.claim());
+  // Remove caches antigos imediatamente para atualizar o celular do usuário
+  e.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-// ESTRATÉGIA DE VELOCIDADE: Pega do celular primeiro, se não tiver, busca na rede
+// ESTRATÉGIA REDE PRIMEIRO: Busca na internet primeiro. Se falhar (offline), usa o celular.
 self.addEventListener('fetch', e => {
+  // Não tenta armazenar links externos do Firebase no cache local do aparelho
+  if (!e.request.url.includes(location.origin)) {
+    return;
+  }
+  
   e.respondWith(
-    caches.match(e.request).then(cachedResponse => {
-      if (cachedResponse) {
-        return cachedResponse; 
-      }
-      return fetch(e.request);
-    })
+    fetch(e.request)
+      .then(res => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
