@@ -7,12 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <title>Auxiliador de Pedidos Pro</title>
-       <!-- Certifique-se de que o final do seu index.html termine exatamente nessa ordem de linhas: -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
-    <script src="app.js"></script>
     
-    <!-- O restante das suas tags do head continuam aqui (ex: link do style.css) -->
+    <!-- LINKS CORRIGIDOS DO FIREBASE (Versão Compatível) -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    
     <!-- Configurações específicas para parecer aplicativo nativo no iPhone -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,7 +23,9 @@
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            // Garante que o caminho do Service Worker use o local correto
+            navigator.serviceWorker.register('sw.js')
+                .catch(err => console.log("Erro ao registrar SW:", err));
         }
     </script>
 </head>
@@ -145,8 +146,4 @@
 
     <script src="app.js"></script>
 </body>
-<!-- Altere para ficar exatamente assim, sem o type="module" -->
-<script src="app.js"></script>
-
-
 </html>
