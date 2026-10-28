@@ -1,4 +1,4 @@
-// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO ULTRA COMPATÍVEL) ======
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO SINCRONIZADA COM O NAVEGADOR) ======
 const firebaseConfig = {
     apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
     authDomain: "://firebaseapp.com",
@@ -10,24 +10,41 @@ const firebaseConfig = {
     measurementId: "G-YRHKXFK8HE"
 };
 
-// Cria a variável do banco no escopo mais alto do arquivo
 let db = null;
-
-try {
-    if (typeof firebase !== 'undefined') {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.database();
-    }
-} catch (e) {
-    console.error("Erro ao conectar com Firebase: ", e);
-}
-// ==============================================================================
-
 let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
+
+// Só roda quando o HTML e todas as bibliotecas da internet terminarem de baixar 100%
+window.onload = function() {
+    try {
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+            
+            // Inicia a escuta em tempo real assim que o banco conectar
+            db.ref('banco_produtos').on('value', (snapshot) => {
+                const dados = snapshot.val();
+                produtos = dados ? Object.keys(dados).map(key => dados[key]) : [];
+                renderizarProdutos();
+                renderizarListaClientes();
+            });
+        } else {
+            alert("Erro crítico: O navegador não conseguiu carregar as bibliotecas do Google Firebase. Verifique sua conexão com a internet.");
+        }
+    } catch (e) {
+        console.error("Erro no carregamento do banco: ", e);
+    }
+
+    // Carrega os clientes locais
+    renderizarListaClientes();
+    if (listaClientes && listaClientes.length > 0) {
+        selecionarCliente(listaClientes[0].id);
+    }
+};
+// ==============================================================================
 
 // Escuta as alterações na nuvem em tempo real de forma segura
 function iniciarEscutaNuvem() {
