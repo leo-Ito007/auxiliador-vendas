@@ -12,14 +12,15 @@ const firebaseConfig = {
 
 // Inicializa o Firebase com tratamento de erro integrado
 try {
-    if (!firebase.apps.length) {
+    if (!window.firebaseAppsInitialized && typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
+        window.firebaseAppsInitialized = true;
     }
 } catch (e) {
     console.error("Erro ao inicializar Firebase: ", e);
 }
 
-const db = firebase.database();
+const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
 // ====================================================
 
 let produtos = [];
@@ -27,24 +28,25 @@ let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
 
 // Escuta as alterações na nuvem em tempo real de forma segura
-db.ref('banco_produtos').on('value', (snapshot) => {
-    try {
-        const dados = snapshot.val();
-        if (dados) {
-            produtos = Object.keys(dados).map(key => dados[key]);
-        } else {
-            produtos = [];
+if (db) {
+    db.ref('banco_produtos').on('value', (snapshot) => {
+        try {
+            const dados = snapshot.val();
+            if (dados) {
+                produtos = Object.keys(dados).map(key => dados[key]);
+            } else {
+                produtos = [];
+            }
+            renderizarProdutos();
+            renderizarListaClientes();
+        } catch (e) {
+            console.error("Erro ao ler dados da nuvem: ", e);
         }
-        renderizarProdutos();
-        renderizarListaClientes();
-    } catch (e) {
-        console.error("Erro ao ler dados da nuvem: ", e);
-    }
-});
+    });
+}
 
 window.onload = function() {
     renderizarListaClientes();
-    // SEGURANÇA: Corrigido o índice [0] para evitar travar no carregamento inicial
     if (listaClientes && listaClientes.length > 0) {
         selecionarCliente(listaClientes[0].id);
     }
@@ -88,7 +90,7 @@ window.salvarCliente = function() {
         id: Date.now(),
         nome: nome,
         cpf: cpf || 'Não informado',
-        cidade: city || 'Não informada',
+        cidade: cidade || 'Não informada',
         carrinho: {}
     };
 
@@ -137,7 +139,7 @@ function calcularTotalCliente(cliente) {
     return total;
 }
 
-// Renderiza la lista de clientes (Esquerda)
+// Renderiza a lista de clientes (Esquerda)
 function renderizarListaClientes() {
     const container = document.getElementById('lista-clientes-selecao');
     if (!container) return;
@@ -198,7 +200,7 @@ window.cadastrarProduto = function() {
         return;
     }
 
-    const file = imagemInput.files ? imagemInput.files[0] : null;
+    const file = (imagemInput && imagemInput.files) ? imagemInput.files[0] : null;
     
     if (file) {
         const reader = new FileReader();
@@ -212,6 +214,7 @@ window.cadastrarProduto = function() {
 }
 
 function salvarNoBanco(nome, preco, imagemBase64) {
+    if (!db) return;
     const idUnico = Date.now();
     const trackingProduto = {
         id: idUnico,
@@ -234,6 +237,7 @@ function salvarNoBanco(nome, preco, imagemBase64) {
 
 // REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
 window.removerProduto = function(id) {
+    if (!db) return;
     if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral da nuvem?")) {
         listaClientes.forEach(cli => {
             if (cli.carrinho && cli.carrinho[id]) {
@@ -245,13 +249,12 @@ window.removerProduto = function(id) {
     }
 }
 
-// RENDERIZA OS PRODUTOS
+// RENDERIZA OS PRODUTOS (CÓDIGO CORRIGIDO E FECHADO TOTALMENTE)
 function renderizarProdutos() {
     const container = document.getElementById('lista-produtos');
     if (!container) return;
     container.innerHTML = '';
 
-    // SEGURANÇA: Checagem com "if" adicionada para evitar travamentos caso o elemento não exista em tela
     if (produtos.length === 0) {
         container.innerHTML = '<p style="color: #6b7280; grid-column: span 2 / span 2; text-align: center; padding: 32px 0;">Nenhum produto cadastrado ainda.</p>';
         const campoTotal = document.getElementById('total-geral');
@@ -264,7 +267,6 @@ function renderizarProdutos() {
 
         container.innerHTML += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
 ${prod.nome}
 R$ ${prod.preco.toFixed(2).replace('.', ',')}
 
