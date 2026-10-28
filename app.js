@@ -1,4 +1,4 @@
-// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (FORMATO COMPATÍVEL) ======
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO ULTRA COMPATÍVEL) ======
 const firebaseConfig = {
     apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
     authDomain: "://firebaseapp.com",
@@ -10,23 +10,58 @@ const firebaseConfig = {
     measurementId: "G-YRHKXFK8HE"
 };
 
+// Cria a variável do banco no escopo mais alto do arquivo
+let db = null;
 
-// Inicializa o Firebase com tratamento de erro integrado
 try {
-    if (!window.firebaseAppsInitialized && typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
-        window.firebaseAppsInitialized = true;
+    if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
     }
 } catch (e) {
-    console.error("Erro ao inicializar Firebase: ", e);
+    console.error("Erro ao conectar com Firebase: ", e);
 }
-
-const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
-// ====================================================
+// ==============================================================================
 
 let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
+
+// Escuta as alterações na nuvem em tempo real de forma segura
+function iniciarEscutaNuvem() {
+    if (db) {
+        db.ref('banco_produtos').on('value', (snapshot) => {
+            try {
+                const dados = snapshot.val();
+                if (dados) {
+                    produtos = Object.keys(dados).map(key => dados[key]);
+                } else {
+                    produtos = [];
+                }
+                renderizarProdutos();
+                renderizarListaClientes();
+            } catch (e) {
+                console.error("Erro ao ler dados da nuvem: ", e);
+            }
+        });
+    }
+}
+
+// Tenta iniciar a escuta imediatamente ou aguarda um instante se o Firebase demorar
+if (db) {
+    iniciarEscutaNuvem();
+} else {
+    setTimeout(() => {
+        try {
+            if (typeof firebase !== 'undefined' && !db) {
+                db = firebase.database();
+                iniciarEscutaNuvem();
+            }
+        } catch(e) {}
+    }, 1000);
+}
 
 // Escuta as alterações na nuvem em tempo real de forma segura
 if (db) {
