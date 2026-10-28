@@ -10,6 +10,7 @@ const firebaseConfig = {
     measurementId: "G-YRHKXFK8HE"
 };
 
+
 // Inicializa o Firebase com tratamento de erro integrado
 try {
     if (!window.firebaseAppsInitialized && typeof firebase !== 'undefined') {
