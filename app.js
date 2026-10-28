@@ -192,14 +192,19 @@ window.selecionarCliente = function(id) {
 
 // Cadastra o produto salvando na Nuvem do Firebase
 // Substitua a função window.cadastrarProduto antiga por esta no seu app.js
-window.cadastrarProduto = function() {
+window.cadastrarProduto = function(evento) {
+    // Se o navegador tentar disparar um evento de envio de formulário, nós barramos aqui
+    if (evento && evento.preventDefault) {
+        evento.preventDefault();
+    }
+
     try {
         const nomeCampo = document.getElementById('prod-nome');
         const precoCampo = document.getElementById('prod-preco');
         const imagemInput = document.getElementById('prod-imagem');
 
         if (!nomeCampo || !precoCampo) {
-            alert("Erro técnico: Os campos do formulário não foram encontrados no HTML.");
+            alert("Erro técnico: Os campos com ID 'prod-nome' ou 'prod-preco' não existem no HTML.");
             return;
         }
 
@@ -207,13 +212,13 @@ window.cadastrarProduto = function() {
         const preco = parseFloat(precoCampo.value);
 
         if (!nome || isNaN(preco)) {
-            alert("Por favor, preencha o nome e o preço do produto antes de adicionar!");
+            alert("Por favor, preencha o nome e o preço do produto antes de clicar!");
             return;
         }
 
-        // CORREÇÃO DEFINITIVA: Pegando o arquivo correto na posição [0]
+        // Checagem segura do arquivo de imagem na posição 0
         if (imagemInput && imagemInput.files && imagemInput.files.length > 0) {
-            const file = imagemInput.files[0]; // Adicionado o [0] para pegar a primeira foto
+            const file = imagemInput.files[0];
             const reader = new FileReader();
             
             reader.onloadend = function() {
@@ -221,17 +226,17 @@ window.cadastrarProduto = function() {
             };
             
             reader.onerror = function() {
-                alert("Erro ao ler o arquivo de imagem. Salvando com imagem padrão.");
+                alert("Erro ao processar imagem. Salvando com imagem padrão.");
                 salvarNoBanco(nome, preco, 'https://placeholder.com');
             };
 
             reader.readAsDataURL(file);
         } else {
-            // Se o usuário não escolher foto, salva com uma imagem padrão sem travar
+            // Se o usuário não colocar foto, usa um link padrão em vez de travar
             salvarNoBanco(nome, preco, 'https://placeholder.com');
         }
     } catch (erro) {
-        alert("Ocorreu um erro ao processar o cadastro: " + erro.message);
+        alert("Ocorreu um erro inesperado no cadastro: " + erro.message);
     }
 };
 
