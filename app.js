@@ -1,4 +1,4 @@
-// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO SINCRONIZADA COM O NAVEGADOR) ======
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO DE ALTA COMPATIBILIDADE) ======
 const firebaseConfig = {
     apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
     authDomain: "://firebaseapp.com",
@@ -15,7 +15,7 @@ let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
 
-// Só roda quando o HTML e todas as bibliotecas da internet terminarem de baixar 100%
+// Inicialização segura ao carregar a página
 window.onload = function() {
     try {
         if (typeof firebase !== 'undefined') {
@@ -24,88 +24,25 @@ window.onload = function() {
             }
             db = firebase.database();
             
-            // Inicia a escuta em tempo real assim que o banco conectar
+            // Ativa o escutador em tempo real da nuvem
             db.ref('banco_produtos').on('value', (snapshot) => {
                 const dados = snapshot.val();
                 produtos = dados ? Object.keys(dados).map(key => dados[key]) : [];
                 renderizarProdutos();
                 renderizarListaClientes();
             });
-        } else {
-            alert("Erro crítico: O navegador não conseguiu carregar as bibliotecas do Google Firebase. Verifique sua conexão com a internet.");
         }
     } catch (e) {
-        console.error("Erro no carregamento do banco: ", e);
+        console.error("Erro ao conectar com Firebase: ", e);
     }
 
-    // Carrega os clientes locais
-    renderizarListaClientes();
-    if (listaClientes && listaClientes.length > 0) {
-        selecionarCliente(listaClientes[0].id);
-    }
-};
-// ==============================================================================
-
-// Escuta as alterações na nuvem em tempo real de forma segura
-function iniciarEscutaNuvem() {
-    if (db) {
-        db.ref('banco_produtos').on('value', (snapshot) => {
-            try {
-                const dados = snapshot.val();
-                if (dados) {
-                    produtos = Object.keys(dados).map(key => dados[key]);
-                } else {
-                    produtos = [];
-                }
-                renderizarProdutos();
-                renderizarListaClientes();
-            } catch (e) {
-                console.error("Erro ao ler dados da nuvem: ", e);
-            }
-        });
-    }
-}
-
-// Tenta iniciar a escuta imediatamente ou aguarda um instante se o Firebase demorar
-if (db) {
-    iniciarEscutaNuvem();
-} else {
-    setTimeout(() => {
-        try {
-            if (typeof firebase !== 'undefined' && !db) {
-                db = firebase.database();
-                iniciarEscutaNuvem();
-            }
-        } catch(e) {}
-    }, 1000);
-}
-
-// Escuta as alterações na nuvem em tempo real de forma segura
-if (db) {
-    db.ref('banco_produtos').on('value', (snapshot) => {
-        try {
-            const dados = snapshot.val();
-            if (dados) {
-                produtos = Object.keys(dados).map(key => dados[key]);
-            } else {
-                produtos = [];
-            }
-            renderizarProdutos();
-            renderizarListaClientes();
-        } catch (e) {
-            console.error("Erro ao ler dados da nuvem: ", e);
-        }
-    });
-}
-
-window.onload = function() {
     renderizarListaClientes();
     if (listaClientes && listaClientes.length > 0) {
         selecionarCliente(listaClientes[0].id);
     }
 };
 
-// Controla as abas/telas do aplicativo de forma global
+// Controla as abas/telas do aplicativo
 window.alternarTela = function(idTela) {
     document.querySelectorAll('.tela-painel').forEach(tela => {
         tela.classList.add('hidden');
@@ -159,7 +96,7 @@ window.salvarCliente = function() {
     window.alternarTela('tela-simulador');
 }
 
-// REMOVER UM CLIENTE ESPECÍFICO
+// Remover um cliente
 window.removerCliente = function(id, event) {
     if (event) event.stopPropagation();
 
@@ -180,7 +117,7 @@ window.removerCliente = function(id, event) {
     }
 }
 
-// Calcula o total acumulado de um cliente
+// Calcula o total de um cliente específico
 function calcularTotalCliente(cliente) {
     let total = 0;
     if (!cliente || !cliente.carrinho) return 0;
@@ -192,7 +129,7 @@ function calcularTotalCliente(cliente) {
     return total;
 }
 
-// Renderiza a lista de clientes (Esquerda)
+// Renderiza os links de clientes
 function renderizarListaClientes() {
     const container = document.getElementById('lista-clientes-selecao');
     if (!container) return;
@@ -226,7 +163,6 @@ function renderizarListaClientes() {
 
 window.selecionarCliente = function(id) {
     clienteAtivo = listaClientes.find(c => c.id === id);
-    
     if (clienteAtivo && !clienteAtivo.carrinho) {
         clienteAtivo.carrinho = {};
     }
@@ -237,29 +173,20 @@ window.selecionarCliente = function(id) {
         if (nmCli) nmCli.innerText = clienteAtivo.nome;
         if (resCli) resCli.innerHTML = `Pedido para: <strong>${clienteAtivo.nome}</strong> (CPF: ${clienteAtivo.cpf})`;
     }
-    
     renderizarListaClientes();
     renderizarProdutos();
 }
 
-// Cadastra o produto salvando na Nuvem do Firebase
-// Substitua a função window.cadastrarProduto antiga por esta no seu app.js
-// Substitua o bloco de cadastro de produtos antigo por este aqui no seu app.js
-// Substitua o bloco de cadastro de produtos antigo por este aqui no seu app.js
+// Coleta as informações e inicia o cadastro de produtos
 window.cadastrarProduto = function(evento) {
-    if (evento && evento.preventDefault) {
-        evento.preventDefault();
-    }
+    if (evento && evento.preventDefault) evento.preventDefault();
 
     try {
         const nomeCampo = document.getElementById('prod-nome');
         const precoCampo = document.getElementById('prod-preco');
         const imagemInput = document.getElementById('prod-imagem');
 
-        if (!nomeCampo || !precoCampo) {
-            alert("Erro técnico: Os campos com ID 'prod-nome' ou 'prod-preco' não existem no HTML.");
-            return;
-        }
+        if (!nomeCampo || !precoCampo) return;
 
         const nome = nomeCampo.value.trim();
         const preco = parseFloat(precoCampo.value);
@@ -269,7 +196,6 @@ window.cadastrarProduto = function(evento) {
             return;
         }
 
-        // Checagem segura do arquivo de imagem
         if (imagemInput && imagemInput.files && imagemInput.files.length > 0) {
             const file = imagemInput.files[0];
             const reader = new FileReader();
@@ -277,26 +203,19 @@ window.cadastrarProduto = function(evento) {
             reader.onloadend = function() {
                 window.salvarNoBanco(nome, preco, reader.result);
             };
-            
-            reader.onerror = function() {
-                alert("Erro ao processar imagem. Salvando com imagem padrão.");
-                window.salvarNoBanco(nome, preco, 'https://placeholder.com');
-            };
-
             reader.readAsDataURL(file);
         } else {
-            // Se o usuário não colocar foto, usa um link padrão
             window.salvarNoBanco(nome, preco, 'https://placeholder.com');
         }
     } catch (erro) {
-        alert("Ocorreu um erro inesperado no cadastro: " + erro.message);
+        console.error(erro);
     }
 };
 
-// CORREÇÃO: Adicionado window. para o JavaScript encontrar a função globalmente
+// Grava o item diretamente no nó da nuvem do Firebase
 window.salvarNoBanco = function(nome, preco, imagemBase64) {
     if (!db) {
-        alert("Erro: O banco de dados do Firebase não foi inicializado corretamente.");
+        alert("Aguarde um segundo, o banco em nuvem está sincronizando com a sua internet local...");
         return;
     }
     
@@ -312,33 +231,26 @@ window.salvarNoBanco = function(nome, preco, imagemBase64) {
     .then(() => {
         document.getElementById('prod-nome').value = '';
         document.getElementById('prod-preco').value = '';
-        if (document.getElementById('prod-imagem')) {
-            document.getElementById('prod-imagem').value = '';
-        }
+        if (document.getElementById('prod-imagem')) document.getElementById('prod-imagem').value = '';
         window.alternarTela('tela-simulador');
     })
     .catch((error) => {
-        alert("Erro ao salvar produto na nuvem: " + error.message);
+        alert("Erro ao salvar: " + error.message);
     });
 };
 
-
-
-// REMOVER UM PRODUTO PERMANENTEMENTE NA NUVEM
 window.removerProduto = function(id) {
     if (!db) return;
     if (confirm("Deseja mesmo excluir permanentemente este produto do catálogo geral da nuvem?")) {
         listaClientes.forEach(cli => {
-            if (cli.carrinho && cli.carrinho[id]) {
-                delete cli.carrinho[id];
-            }
+            if (cli.carrinho && cli.carrinho[id]) delete cli.carrinho[id];
         });
         localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
         db.ref('banco_produtos/' + id).remove();
     }
 }
 
-// RENDERIZA OS PRODUTOS (CÓDIGO CORRIGIDO E FECHADO TOTALMENTE)
+// Renderiza a grade de produtos cadastrados na nuvem
 function renderizarProdutos() {
     const container = document.getElementById('lista-produtos');
     if (!container) return;
@@ -355,7 +267,6 @@ function renderizarProdutos() {
         const qtdAtual = (clienteAtivo && clienteAtivo.carrinho) ? (clienteAtivo.carrinho[prod.id] || 0) : 0;
 
         container.innerHTML += `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
 ${prod.nome}
 R$ ${prod.preco.toFixed(2).replace('.', ',')}
 
