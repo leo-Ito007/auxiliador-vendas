@@ -1,4 +1,5 @@
 // ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO DE ALTA COMPATIBILIDADE) ======
+// ====== CONFIGURAÇÃO DO BANCO DE DADOS FIREBASE (VERSÃO DE ALTA COMPATIBILIDADE CORRIGIDA) ======
 const firebaseConfig = {
     apiKey: "AIzaSyCBLiK7H_dgn5uvB10NUsjkgEgGRRB4yiE",
     authDomain: "://firebaseapp.com",
@@ -14,6 +15,7 @@ let db = null;
 let produtos = [];
 let listaClientes = JSON.parse(localStorage.getItem('banco_clientes')) || [];
 let clienteAtivo = null;
+
 
 // Inicialização segura ao carregar a página
 window.onload = function() {
@@ -251,7 +253,6 @@ window.removerProduto = function(id) {
 }
 
 // Renderiza a grade de produtos cadastrados na nuvem
-// Renderiza a grade de produtos cadastrados na nuvem
 function renderizarProdutos() {
     const container = document.getElementById('lista-produtos');
     if (!container) return;
@@ -267,44 +268,38 @@ function renderizarProdutos() {
     produtos.forEach(prod => {
         const qtdAtual = (clienteAtivo && clienteAtivo.carrinho) ? (clienteAtivo.carrinho[prod.id] || 0) : 0;
 
-        // CORREÇÃO: Template string estruturado corretamente para evitar quebras
         container.innerHTML += `
-            <div class="card-produto" style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
-                <div style="font-weight: bold;">${prod.nome}</div>
-                <div style="color: #1e3a8a;">R$ ${prod.preco.toFixed(2).replace('.', ',')}</div>
-                <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 12px;">Qtd:</label>
-                    <input type="number" value="${qtdAtual}" onchange="window.atualizarQuantidade(${prod.id}, this.value)" style="width: 60px; padding: 4px;" min="0">
-                    <button onclick="window.removerProduto(${prod.id})" style="background: none; border: none; cursor: pointer;">🗑️</button>
-                </div>
-            </div>
-        `;
-    });
-    calcularTotalGeralAtivo();
-}
+${prod.nome}
+R$ ${prod.preco.toFixed(2).replace('.', ',')}
 
+Qtd
+🗑️
+
+
+
+`;
+});
+calcularTotalGeralAtivo();
+}
 window.atualizarQuantidade = function(idProduto, qtd) {
-    if (!clienteAtivo) {
-        alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
-        renderizarProdutos();
-        return;
-    }
-    const valorQtd = parseInt(qtd) || 0;
-    clienteAtivo.carrinho[idProduto] = valorQtd;
-    localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
-    calcularTotalGeralAtivo();
-    renderizarListaClientes();
+if (!clienteAtivo) {
+alert("Por favor, selecione um cliente na barra lateral antes de alterar as quantidades!");
+renderizarProdutos();
+return;
 }
-
+const valorQtd = parseInt(qtd) || 0;
+clienteAtivo.carrinho[idProduto] = valorQtd;
+localStorage.setItem('banco_clientes', JSON.stringify(listaClientes));
+calcularTotalGeralAtivo();
+renderizarListaClientes();
+}
 function calcularTotalGeralAtivo() {
-    const total = calcularTotalCliente(clienteAtivo);
-    const campoTotal = document.getElementById('total-geral');
-    if (campoTotal) {
-        // CORREÇÃO: Ajustada a sintaxe da interpolação que estava com o "R$" fora do lugar correto
-        campoTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-    }
+const total = calcularTotalCliente(clienteAtivo);
+const campoTotal = document.getElementById('total-geral');
+if (campoTotal) {
+campoTotal.innerText = R$ `${total.toFixed(2).replace('.', ',')}`;
 }
-
+}
 window.limparTudo = function() {
 if (confirm("Tem certeza que deseja apagar permanentemente seus clientes locais? Os produtos da nuvem NÃO serão apagados por segurança.")) {
 localStorage.removeItem('banco_clientes');
